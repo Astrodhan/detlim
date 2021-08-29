@@ -20,9 +20,12 @@ import os
 from datetime import datetime
 
 #SECTION 1: READING DATA
-data1='HD59967.vels'                                                            #File name of first data file
-data2='HD76653.vels'
-data3='HD115820.vels'                                                           #Has very few entries
+
+datadir='RV_data/'
+
+data1=datadir+'HD59967.vels'                                                            #File name of first data file
+data2=datadir+'HD76653.vels'
+data3=datadir+'HD115820.vels'                                                           #Has very few entries
                                                                                 #For now, you have to manually add stars like this.
 
 star=data1                                                                      #Change here to change the star
@@ -171,7 +174,7 @@ def writedata(Z,P,X,Y,amp):
             f.write('\n')
     f.close()
 
-execute()                                                                       # Hash this if you wish to avoid the detection probability calculation
+#execute()                                                                       # Hash this if you wish to avoid the detection probability calculation
 s2=time.time()                                              
 print("Time taken in seconds: ")
 print(s2-s1)

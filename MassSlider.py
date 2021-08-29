@@ -8,9 +8,12 @@ from PyAstronomy.pyTiming import pyPeriod
 
 
 #SECTION 1: READING DATA
-data1 = 'HD59967.vels'                                                         #File name of first data file
-data2 = 'HD76653.vels'
-data3 = 'HD115820.vels'                                                        #Has very few entries
+datadir='RV_data/'
+
+data1=datadir+'HD59967.vels'                                                            #File name of first data file
+data2=datadir+'HD76653.vels'
+data3=datadir+'HD115820.vels'                                                           #Has very few entries
+                                                                                      #Has very few entries
 
 star = data1
 data = np.genfromtxt(star)                                                     #Reading the file
@@ -56,29 +59,6 @@ class pgm:                                                                     #
             fapvalues[i]=gls2.powerLevel(fapv)                                 #power level gives the power threshold for the given value for FAP
         return fapvalues
     
-    def fappowerlevel(f,mp,d,fapv):                                            # Resturns the power values of the Fourier Transform of input signal+ added sine
-        rv1=rv#+pgm.A(1047.94,mp,f)*np.sin(2*np.pi*time*f+d)                   #Adding a simulated signal to our RV values
-        gls2=pyPeriod.Gls((time,rv1),fbeg=f_min,fend=f_max,freq=farray)
-        return gls2.powerLevel(fapv)
-    
-    def FTu(f,A):                                                              # Power averaged over phase THIS FUNCTION IS A RELIC, NOT UPDATED DON'T USE 
-        power=np.zeros(res)
-        for i in range(100):
-            ph=i*2*np.pi/100
-            rv1=rv+A*np.sin(2*np.pi*time*f+ph)
-            gls3=gls.Gls((time,rv1,error),fbeg=f_min,fend=f_max,freq=farray)
-            power=power+gls3.power
-        return power/100
-
-    def windowf():                                                             #Window Function (Doesn't work for some reason, so unsused)
-        ones=np.zeros(len(time))
-        for i in range(len(time)):
-            ones[i]=1.0
-        window=pyPeriod.Gls((time,np.zeros(len(time))),fbeg=f_min,fend=f_max,freq=farray)
-        return window.power
-
-
-
 #SECTION 4:  PLOTTING
 
 """Below is the code that creates a dynamic plot, you could move the sliders and change parameteres to see an updated graph immediately"""
