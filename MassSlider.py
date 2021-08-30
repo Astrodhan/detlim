@@ -32,7 +32,7 @@ f_min = 1/(max(time)-min(time))                                                #
 res = 500                                                                      #The resolution/least count of frequency
 farray = np.linspace(f_min,f_max,res)                                          #The freq range over which we will calculate the periodogram
 
-prim = pyPeriod.Gls((time,rv))
+prim = pyPeriod.Gls((time,rv,error),fbeg=f_min,fend=f_max,freq=farray)
 fapp = prim.powerLevel(0.1)
 
 #SECTION 3: DEFINING FUNCTIONS
@@ -86,7 +86,7 @@ def update(val):
     f = sldrf.val
     mp = sldrmp.val
     d= sldrd.val
-    p.set_ydata(pgm.FT(f,mp,d))
+    p.set_ydata(pgm.FT(f,mp,d)-prim.power)
     #q.set_ydata(pgm.fap(f,mp,d,0.1))
     fig.canvas.draw_idle()
 

@@ -10,7 +10,6 @@ More details will be added later, please email me if clarifications are needed.
 """
 
 import numpy as np
-import gls
 import matplotlib.pyplot as plt
 #from matplotlib.widgets import Slider
 from PyAstronomy.pyTiming import pyPeriod
@@ -23,9 +22,9 @@ from datetime import datetime
 
 datadir='RV_data/'
 
-data1=datadir+'HD59967.vels'                                                            #File name of first data file
+data1=datadir+'HD59967.vels'                                                    #File name of first data file
 data2=datadir+'HD76653.vels'
-data3=datadir+'HD115820.vels'                                                           #Has very few entries
+data3=datadir+'HD115820.vels'                                                   #Has very few entries
                                                                                 #For now, you have to manually add stars like this.
 
 star=data1                                                                      #Change here to change the star
@@ -43,13 +42,15 @@ for i in range(len(times)-1):
     
 f_max=1/max(diff)                                                               #Maximum frequency that could be safely extracted, I have chosen max(diff) instead of min(diff), it should not make much difference in regularly spaced data
 f_min=1/(max(times)-min(times))                                                 #Minimum frequency that could be certainly extracted, max(times)-min(times) is the total time-window of observations.
-res = 500                                                                       #The resolution/least count of frequency
+res = 100                                                                       #The resolution/least count of frequency
 farray=np.linspace(f_min,f_max,res)                                             #The freq range over which we will calculate the periodogram
 
-prim=pyPeriod.Gls((times,rv))                                                   #This is the original periodogram, prim for primary.
+prim=pyPeriod.Gls((times,rv,error),fbeg=f_min,fend=f_max,freq=farray)                                                   #This is the original periodogram, prim for primary.
 fapp=prim.powerLevel(0.01)                                                      # this is the false alarm probability pertaining to an error of 1%; if we have a peak in the periodogram above this level it means that there is only 1% chance of that happening randomly.
 
 ms=1047.94                                                                      # Mass of the star, currently set to 1 Msun in Mjup
+
+
 
 #SECTION 3: DEFINING FUNCTIONS
 class pgm:                                                                      #pgm for periodogram
@@ -68,49 +69,25 @@ class pgm:                                                                      
         return gls2.power
 
 
+def emfunc(f):
+    """This function returns 1 for normal frequencipppes and 1.616 for those 
+    frequencies for which there are already present peaks 
+    in the original periodogram (prim)"""     
+    i=farray.tolist().index(f)                                                             #It is called the M function, I just named it so because it looks like an 'M' when there are two peaks in the periodogram
+    if prim.power[i]<fapp:
+        return 1
+    else: 
+        return 3
 
-#SECTION 4:  SLIDER PLOT (It is made into a big comment, don't use it together with gradmap, it might hang your computer)
-"""
-fig, ax = plt.subplots()
-plt.subplots_adjust(left=0.13,bottom=0.25)
-p,=plt.plot(farray,pgm.FT((f_max-f_min)/2,0,0))
-q,=plt.plot(farray,pgm.fap((f_max-f_min)/2,0,0,0.1))
-#r,=plt.plot(farray,pgm.windowf())
-plt.xlabel("Frequency spectrum")
-plt.ylabel("Power")
-plt.title(star)
-ax.set_ylim([0,1])
-axfreq = plt.axes([0.13, .12, 0.775, 0.03])
-axamp = plt.axes([0.13, .07, 0.775, 0.03])
-axphase= plt.axes([0.13, .02, 0.775, 0.03])
-
-sldrf = Slider(axfreq, 'Frequency', f_min, f_max, valinit=(f_max-f_min)/2,valstep=0.01)
-sldrmp = Slider(axamp, 'Planet Mass', 0, 10, valinit=0,valstep=0.01)
-sldrd = Slider(axphase, 'Phase',0, 2*np.pi, valinit=0,valstep=0.05)
-
-def update(val):
-    f = sldrf.val
-    mp = sldrmp.val
-    d= sldrd.val
-    p.set_ydata(pgm.FT(f,mp,d))
-    q.set_ydata(pgm.fap(f,mp,d,0.1))
-    fig.canvas.draw_idle()
-
-sldrf.on_changed(update)
-sldrmp.on_changed(update)
-sldrd.on_changed(update)
-
-plt.show()
-"""
 #SECTION 5: DETECTION LIMITS MAPS
 s1=time.time()                                  # Start time for run-time counting
-zres=36                                         # Resolution in the third axis, so the resolution of the probability. zres=10 would mean detection probability can take values from 0 to 1 in steps of 0.1
-xyres=100                                       # Resolution/number of divisions of the x and y axis, of frequency
-bandwidth=(f_max-f_min)/100                     # This is the half-bandwidth around the input frequency, too wide and you get false detections in the maps 
+zres=10                                         # Resolution in the third axis, so the resolution of the probability. zres=10 would mean detection probability can take values from 0 to 1 in steps of 0.1
+xyres=res                                      # Resolution/number of divisions of the x and y axis, of frequency
+bandwidth=(f_max-f_min)/300                     # This is the half-bandwidth around the input frequency, too wide and you get false detections in the maps 
 mplower=0                                       # Lowest mass for the fake signal in jupiter masses
 mpupper=1                                       # Upper limit for the mass for the fake signal
 fakemass=np.linspace(mplower,mpupper,xyres)     # This is the 1D mass space
-fakefreq=np.linspace(f_min,f_max,xyres)         # This is the 1D frequency space
+fakefreq=farray         # This is the 1D frequency space
 fakemass, fakefreq=np.meshgrid(fakemass, fakefreq) #Making them both 2D, I don't fully understand how numpy.meshgrid works.
 rows, cols = (xyres, xyres) 
 prob = [[1 for i in range(cols)] for j in range(rows)] # Detection Probability Matrix, starting all values with 1.
@@ -122,22 +99,16 @@ for i in range(xyres):
         amp[i][j]=pgm.A(ms,fakemass[j][j],fakefreq[i][i]) #amplitude values calculated here. They are not used in calculation, only to be recorded in data.
         
 def detprob(mp,f):                              # Indices are inputs. Calculates the fraction of phase for which the periodogram signal corresponding to the added signal exceeds the False Alarm Probability
-    fband=[]                                    # fband is the approximate frequncy band around the input frequency
+    #fband=[]                                    # fband is the approximate frequncy band around the input frequency
                  
-    powvals=[]                                  # These will be the respective power values for the chosen band, a subset of farray.
+    #powvals=[]                                  # These will be the respective power values for the chosen band, a subset of farray.
     dp=0                                        # dp stands for detection probability 
     
-    for i in range(0,res):
-        if farray[i]>f-bandwidth and farray[i]<f+bandwidth:
-            fband.append(i)                     # i is appended and not farray[i] because the power array follows the same indexing.
-     
     for i in range(zres):
-        powar=pgm.FT(f,mp,i*2*np.pi/zres)       #Incorrect spelling to avoid mix-up
-        for j in fband:
-            powvals.append(powar[j])
-        if max(powvals)>fapp:                   # if the peak of the powervalue exceeds the false alarm probability level then it is a detection
+        powar=pgm.FT(f,mp,i*2*np.pi/zres)-prim.power
+        if powar[farray.tolist().index(f)]*emfunc(f)>fapp:    
             dp+=1
-    return dp/zres, max(powvals)                #This gives you 1 single detection probability. For example '0.5'.
+    return dp/zres, powar[farray.tolist().index(f)]       #This gives you 1 single detection probability. For example '0.5'.
 
 def execute():                                                                  #This function is created so you can avoid the main calculation when testing other parts of the code             
     """This function uses while condition and for loop to cover
@@ -174,7 +145,7 @@ def writedata(Z,P,X,Y,amp):
             f.write('\n')
     f.close()
 
-#execute()                                                                       # Hash this if you wish to avoid the detection probability calculation
+execute()                                                                       # Hash this if you wish to avoid the detection probability calculation
 s2=time.time()                                              
 print("Time taken in seconds: ")
 print(s2-s1)
