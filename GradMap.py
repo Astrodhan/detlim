@@ -44,9 +44,9 @@ f_max=1/max(diff)                                                               
 f_min=1/(max(times)-min(times))                                                 #Minimum frequency that could be certainly extracted, max(times)-min(times) is the total time-window of observations.
 res = 100                                                                       #The resolution/least count of frequency
 farray=np.linspace(f_min,f_max,res)                                             #The freq range over which we will calculate the periodogram
-
+falsealarmprob=0.01
 prim=pyPeriod.Gls((times,rv,error),fbeg=f_min,fend=f_max,freq=farray)                                                   #This is the original periodogram, prim for primary.
-fapp=prim.powerLevel(0.01)                                                      # this is the false alarm probability pertaining to an error of 1%; if we have a peak in the periodogram above this level it means that there is only 1% chance of that happening randomly.
+fapp=prim.powerLevel(falsealarmprob)                                                      # this is the false alarm probability pertaining to an error of 1%; if we have a peak in the periodogram above this level it means that there is only 1% chance of that happening randomly.
 
 ms=1047.94                                                                      # Mass of the star, currently set to 1 Msun in Mjup
 
@@ -77,7 +77,7 @@ def emfunc(f):
     if prim.power[i]<fapp:
         return 1
     else: 
-        return 3
+        return 1.5
 
 #SECTION 5: DETECTION LIMITS MAPS
 s1=time.time()                                  # Start time for run-time counting
@@ -105,8 +105,8 @@ def detprob(mp,f):                              # Indices are inputs. Calculates
     dp=0                                        # dp stands for detection probability 
     
     for i in range(zres):
-        powar=pgm.FT(f,mp,i*2*np.pi/zres)-prim.power
-        if powar[farray.tolist().index(f)]*emfunc(f)>fapp:    
+        powar=pgm.FT(f,mp,i*2*np.pi/zres)#-prim.power
+        if powar[farray.tolist().index(f)]/emfunc(f)>fapp:   # Everything inside [] is the index of the frequency in the frequency array 
             dp+=1
     return dp/zres, powar[farray.tolist().index(f)]       #This gives you 1 single detection probability. For example '0.5'.
 
@@ -155,10 +155,11 @@ fig,ax = plt.subplots()
 #ax2= ax.twinx()
 plt.subplots_adjust(left=0.1, right=0.9)    #Adjusting frame size
 extent= mplower,mpupper,f_min,f_max             # Axes for plotting through imshow
-plt.title("Detection probability map for "+star)
+plt.title("Detection probability map for "+star+"\nFor False Alarm Probability of 1%")
 plt.imshow(np.transpose(prob), extent=extent)   # I don't know why I need to take transpose for correct results, see comment on line 173
-plt.xlabel("Planet Mass in Jupiter masses")
-plt.ylabel("Planet Frequency in 1/days")
+
+plt.xlabel("Mass of the hypothetical planet (Mjup)")
+plt.ylabel("Frequency of the hypothetical (1/days)")
 plt.colorbar()
 plt.show()
 

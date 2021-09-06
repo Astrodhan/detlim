@@ -86,7 +86,7 @@ def update(val):
     f = sldrf.val
     mp = sldrmp.val
     d= sldrd.val
-    p.set_ydata(pgm.FT(f,mp,d)-prim.power)
+    p.set_ydata(pgm.FT(f,mp,d))
     #q.set_ydata(pgm.fap(f,mp,d,0.1))
     fig.canvas.draw_idle()
 
